@@ -1,9 +1,13 @@
 module Pages.Home_ exposing (Model, Msg, page)
 
 import Gen.Params.Home_ exposing (Params)
+import Html exposing (a, p, text)
+import Html.Attributes exposing (href)
 import Page
 import Request
 import Shared
+import Task
+import Time
 import View exposing (View)
 
 
@@ -12,7 +16,7 @@ page shared req =
     Page.element
         { init = init
         , update = update
-        , view = view
+        , view = view shared
         , subscriptions = subscriptions
         }
 
@@ -22,12 +26,15 @@ page shared req =
 
 
 type alias Model =
-    {}
+    { timeMaybe : Maybe Time.Posix }
 
 
 init : ( Model, Cmd Msg )
 init =
-    ( {}, Cmd.none )
+    ( { timeMaybe = Nothing
+      }
+    , Task.perform GotTime Time.now
+    )
 
 
 
@@ -35,14 +42,14 @@ init =
 
 
 type Msg
-    = ReplaceMe
+    = GotTime Time.Posix
 
 
 update : Msg -> Model -> ( Model, Cmd Msg )
 update msg model =
     case msg of
-        ReplaceMe ->
-            ( model, Cmd.none )
+        GotTime posix ->
+            ( { model | timeMaybe = Just posix }, Cmd.none )
 
 
 
@@ -54,10 +61,31 @@ subscriptions model =
     Sub.none
 
 
+toTimeText : Time.Zone -> Time.Posix -> String
+toTimeText zone posix =
+    let
+        hourText =
+            String.fromInt <| Time.toHour zone posix
 
--- VIEW
+        minutesText =
+            String.fromInt <| Time.toMinute zone posix
+
+        secondsText =
+            String.fromInt <| Time.toSecond zone posix
+    in
+    hourText ++ ":" ++ minutesText ++ ":" ++ secondsText
 
 
-view : Model -> View Msg
-view model =
-    View.placeholder "Home_"
+view : Shared.Model -> Model -> View Msg
+view shared model =
+    { title = "Shared Test"
+    , body =
+        [ p [] [ text "home" ]
+        , case model.timeMaybe of
+            Just time ->
+                p [] [ text <| toTimeText shared.timezone time ]
+
+            Nothing ->
+                text ""
+        ]
+    }
